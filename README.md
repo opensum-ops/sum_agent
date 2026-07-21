@@ -1,10 +1,6 @@
 # sum_agent
 
-Pull-based agent for OpenSUM. Runs on every managed host, polls [[sum_server]] (or a [[sum_satellite]]) for signed jobs, verifies the signature, executes the work, and reports results. **Never opens a listening port.** Loads signed external plugins as subprocesses that speak line-delimited JSON-RPC 2.0 over stdio.
-
-- Product spec: see `../Obsidian/` (source of truth).
-- Cross-component guidance: `../CLAUDE.md`.
-- Tech stack and rationale: `[[Tech Stack]]` in the Obsidian vault.
+Pull-based agent for OpenSUM. Runs on every managed host, polls sum_server (or a sum_satellite) for signed jobs, verifies the signature, executes the work, and reports results. **Never opens a listening port.** Loads signed external plugins as subprocesses that speak line-delimited JSON-RPC 2.0 over stdio.
 
 ## Status
 
@@ -95,12 +91,3 @@ uv run pytest tests/unit/test_canonical_matches_server.py
 ```
 
 Unit tests need no network. End-to-end smoke against a running `sum_server` is documented in `tests/e2e/README.md`.
-
-## Git hygiene
-
-When this becomes its own repo:
-
-```sh
-git init
-printf '%s\n' '.claude/' 'CLAUDE.md' '.env' '.venv/' '__pycache__/' '*.pyc' '.pytest_cache/' '.mypy_cache/' '.ruff_cache/' 'dist/' 'build/' >> .git/info/exclude
-```
