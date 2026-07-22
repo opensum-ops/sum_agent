@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# PyInstaller / build outputs
+build/
+dist/
+*.spec
+
+# Local environment
+.env

@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-amd64:
+    name: Build linux/amd64 binary
+    # Pinned to an older runner on purpose: the binary's glibc floor is set by
+    # the build host, so 22.04 (glibc 2.35) keeps it runnable on Debian 12 /
+    # Ubuntu 22.04 and newer. Bump only if you also raise the supported floor.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Pin Python
+        run: uv python install 3.12
+
+      - name: Install project (frozen, runtime deps only)
+        run: uv sync --frozen
+
+      - name: Build single-file binary
+        run: >
+          uv run --with pyinstaller pyinstaller --onefile --name sum-agent
+          --collect-submodules sum_agent --collect-all nacl --collect-all psutil
+          --log-level WARN packaging/pyinstaller_entry.py
+
+      - name: Smoke-test the binary
+        run: |
+          ./dist/sum-agent version
+          ./dist/sum-agent inventory > /dev/null
+          ./dist/sum-agent enroll || test $? -eq 2
+
+      - name: Stage artifact with versioned name and checksum
+        run: |
+          mkdir -p out
+          cp dist/sum-agent "out/sum-agent-${GITHUB_REF_NAME}-linux-amd64"
+          ( cd out && sha256sum "sum-agent-${GITHUB_REF_NAME}-linux-amd64" \
+              > "sum-agent-${GITHUB_REF_NAME}-linux-amd64.sha256" )
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/sum-agent-${{ github.ref_name }}-linux-amd64
+            out/sum-agent-${{ github.ref_name }}-linux-amd64.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true
