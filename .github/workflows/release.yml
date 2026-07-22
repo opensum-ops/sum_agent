@@ -51,12 +51,18 @@ jobs:
           ./dist/sum-agent version
           ./dist/sum-agent inventory > /dev/null
           ./dist/sum-agent enroll || test $? -eq 2
-          # Exercise the runner -> dispatch -> verify -> nacl import chain. With
-          # no config it exits on a config error, but it must NOT fail to import
-          # (this is what catches a missing frozen module like _cffi_backend).
-          out=$(./dist/sum-agent run 2>&1 || true)
-          if printf '%s' "$out" | grep -qiE "ModuleNotFoundError|Failed to execute script"; then
-            echo "FATAL: frozen import chain is broken:"; printf '%s\n' "$out"; exit 1
+          # Exercise the runner -> dispatch -> verify -> nacl -> cffi import
+          # chain. Point at a dummy URL + empty state so `run` reaches the
+          # handled "not enrolled" path (clean exit, no network). A missing
+          # frozen module (e.g. _cffi_backend) crashes the import here instead.
+          # Match only import errors: an unhandled config error would also print
+          # PyInstaller's "Failed to execute script", so we must not grep for it.
+          tmpstate="$(mktemp -d)"
+          out="$(SUM_AGENT_SERVER_URL=https://localhost SUM_AGENT_STATE_DIR="$tmpstate" \
+            ./dist/sum-agent run 2>&1 || true)"
+          printf '%s\n' "$out"
+          if printf '%s' "$out" | grep -qiE "ModuleNotFoundError|No module named|ImportError|cannot open shared object"; then
+            echo "FATAL: frozen import chain is broken"; exit 1
           fi
           echo "import-chain smoke OK"
 
