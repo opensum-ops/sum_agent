@@ -37,9 +37,13 @@ jobs:
         run: uv sync --frozen
 
       - name: Build single-file binary
+        # cffi + _cffi_backend are required transitively by PyNaCl; PyInstaller
+        # does not pick up the _cffi_backend extension on its own, so collect it
+        # explicitly or the frozen `run` command dies importing nacl.
         run: >
           uv run --with pyinstaller pyinstaller --onefile --name sum-agent
           --collect-submodules sum_agent --collect-all nacl --collect-all psutil
+          --collect-all cffi --hidden-import _cffi_backend
           --log-level WARN packaging/pyinstaller_entry.py
 
       - name: Smoke-test the binary
@@ -47,6 +51,14 @@ jobs:
           ./dist/sum-agent version
           ./dist/sum-agent inventory > /dev/null
           ./dist/sum-agent enroll || test $? -eq 2
+          # Exercise the runner -> dispatch -> verify -> nacl import chain. With
+          # no config it exits on a config error, but it must NOT fail to import
+          # (this is what catches a missing frozen module like _cffi_backend).
+          out=$(./dist/sum-agent run 2>&1 || true)
+          if printf '%s' "$out" | grep -qiE "ModuleNotFoundError|Failed to execute script"; then
+            echo "FATAL: frozen import chain is broken:"; printf '%s\n' "$out"; exit 1
+          fi
+          echo "import-chain smoke OK"
 
       - name: Stage artifact with versioned name and checksum
         run: |
