@@ -59,7 +59,7 @@ async def _cmd_enroll(args: argparse.Namespace) -> int:
         server_url=server_url, enrollment_token=args.token, settings=settings
     )
     path = state_mod.save(settings.state_dir, new_state)
-    print(f"enrolled (server_id={new_state.server_id}); state at {path}")
+    print(f"enrolled (host_id={new_state.host_id}); state at {path}")
     return EXIT_OK
 
 

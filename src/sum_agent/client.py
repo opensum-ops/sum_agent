@@ -22,7 +22,7 @@ async def enroll(*, server_url: str, enrollment_token: str, settings: Settings) 
         )
     return State(
         server_url=server_url,
-        server_id=uuid.UUID(body["server_id"]),
+        host_id=uuid.UUID(body["host_id"]),
         agent_token=body["agent_token"],
         signing_public_key_b64=body["signing_public_key"],
         enrolled_at=dt.datetime.now(tz=dt.UTC),
@@ -42,52 +42,5 @@ async def submit_inventory(
             "POST",
             "/api/v1/agents/inventory",
             json={"components": components},
-        )
-        return body
-
-
-async def poll_jobs(state: State, *, settings: Settings, limit: int = 50) -> list[dict[str, Any]]:
-    async with http.authed_client(
-        base_url=state.server_url,
-        bearer=state.agent_token,
-        settings=settings,
-    ) as c:
-        body = await http.request_json(c, "GET", f"/api/v1/agents/jobs?limit={limit}")
-    return body.get("jobs", []) if isinstance(body, dict) else []
-
-
-async def pickup(state: State, job_id: str, *, settings: Settings) -> dict[str, Any]:
-    async with http.authed_client(
-        base_url=state.server_url,
-        bearer=state.agent_token,
-        settings=settings,
-    ) as c:
-        body: dict[str, Any] = await http.request_json(
-            c, "POST", f"/api/v1/agents/jobs/{job_id}/pickup"
-        )
-        return body
-
-
-async def report_result(
-    state: State,
-    job_id: str,
-    *,
-    outcome: dict[str, Any],
-    settings: Settings,
-) -> dict[str, Any]:
-    async with http.authed_client(
-        base_url=state.server_url,
-        bearer=state.agent_token,
-        settings=settings,
-    ) as c:
-        body: dict[str, Any] = await http.request_json(
-            c,
-            "POST",
-            f"/api/v1/agents/jobs/{job_id}/result",
-            json={
-                "status": outcome["status"],
-                "exit_code": outcome.get("exit_code"),
-                "output": outcome.get("output", {}),
-            },
         )
         return body

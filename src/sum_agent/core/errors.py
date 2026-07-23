@@ -40,12 +40,4 @@ class StateCorruptedError(AgentError):
 
 
 class SignatureError(AgentError):
-    """A job's signature did not verify against the registered server public key."""
-
-
-class UnknownCapabilityError(AgentError):
-    """Capability name not present in either the built-in or plugin registry."""
-
-
-class PluginError(AgentError):
-    """Plugin discovery, verification, or execution failed."""
+    """A signature did not verify against the registered server public key."""
