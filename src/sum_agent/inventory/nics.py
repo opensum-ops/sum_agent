@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from sum_agent.inventory.base import register
+
 SYS_NET = Path("/sys/class/net")
 _VIRTUAL_PREFIXES = ("docker", "veth", "br-", "tun", "tap", "virbr")
 _MAC_RE = re.compile(r"([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}")
@@ -68,3 +70,6 @@ def collect(*, sys_net: Path = SYS_NET) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+register("nics", "components", collect)

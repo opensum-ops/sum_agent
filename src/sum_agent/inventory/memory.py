@@ -6,6 +6,8 @@ from typing import Any
 
 import psutil
 
+from sum_agent.inventory.base import register
+
 
 def collect() -> list[dict[str, Any]]:
     total = int(psutil.virtual_memory().total)
@@ -25,3 +27,6 @@ def collect() -> list[dict[str, Any]]:
             },
         }
     ]
+
+
+register("memory", "components", collect)

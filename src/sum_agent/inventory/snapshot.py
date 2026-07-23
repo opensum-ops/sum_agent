@@ -1,4 +1,4 @@
-"""Orchestrator: build a full inventory snapshot across collectors.
+"""Orchestrator: build a full inventory snapshot from every registered collector.
 
 Per-collector failures are caught, logged, and ignored: inventory is
 best-effort and partial snapshots are preferable to none.
@@ -6,39 +6,31 @@ best-effort and partial snapshots are preferable to none.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 import structlog
 
-from sum_agent.inventory import cpu, disks, gpu, memory, nics
+from sum_agent.inventory.base import collectors, run_collector
 
 log = structlog.get_logger(__name__)
 
 
-async def _safe_async(
-    name: str, fn: Callable[[], Awaitable[list[dict[str, Any]]]]
-) -> list[dict[str, Any]]:
-    try:
-        return await fn()
-    except Exception as exc:
-        log.warning("inventory_collector_failed", collector=name, error=str(exc))
-        return []
-
-
-def _safe_sync(name: str, fn: Callable[[], list[dict[str, Any]]]) -> list[dict[str, Any]]:
-    try:
-        return fn()
-    except Exception as exc:
-        log.warning("inventory_collector_failed", collector=name, error=str(exc))
-        return []
-
-
-async def build() -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    items += _safe_sync("cpu", cpu.collect)
-    items += _safe_sync("memory", memory.collect)
-    items += await _safe_async("disks", disks.collect)
-    items += _safe_sync("nics", nics.collect)
-    items += await _safe_async("gpu", gpu.collect)
-    return items
+async def build() -> dict[str, Any]:
+    """Return ``{"facts": {...}, "components": [...]}`` from the registry."""
+    facts: dict[str, Any] = {}
+    components: list[dict[str, Any]] = []
+    for collector in collectors():
+        try:
+            result = await run_collector(collector)
+        except Exception as exc:
+            log.warning("inventory_collector_failed", collector=collector.name, error=str(exc))
+            continue
+        if collector.kind == "facts":
+            for key, value in dict(result).items():
+                if key in facts:
+                    log.warning("inventory_fact_collision", collector=collector.name, key=key)
+                    continue
+                facts[key] = value
+        else:
+            components.extend(result)
+    return {"facts": facts, "components": components}

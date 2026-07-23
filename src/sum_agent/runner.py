@@ -20,9 +20,13 @@ log = structlog.get_logger(__name__)
 async def _inventory_loop(state: State, *, settings: Settings, stop: asyncio.Event) -> None:
     while not stop.is_set():
         try:
-            components = await build_inventory()
-            await client.submit_inventory(state, components, settings=settings)
-            log.info("inventory_submitted", count=len(components))
+            snapshot = await build_inventory()
+            await client.submit_inventory(state, snapshot, settings=settings)
+            log.info(
+                "inventory_submitted",
+                facts=len(snapshot["facts"]),
+                components=len(snapshot["components"]),
+            )
         except (ServerError, TransportError) as exc:
             log.warning("inventory_submit_failed", error=str(exc))
         except Exception:
