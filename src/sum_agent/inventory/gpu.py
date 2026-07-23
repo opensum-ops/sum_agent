@@ -7,6 +7,8 @@ import shlex
 import shutil
 from typing import Any
 
+from sum_agent.inventory.base import register
+
 
 async def _maybe_run(*cmd: str) -> str | None:
     if shutil.which(cmd[0]) is None:
@@ -82,3 +84,6 @@ async def collect() -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+register("gpu", "components", collect)

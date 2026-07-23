@@ -30,8 +30,9 @@ async def enroll(*, server_url: str, enrollment_token: str, settings: Settings) 
 
 
 async def submit_inventory(
-    state: State, components: list[dict[str, Any]], *, settings: Settings
+    state: State, snapshot: dict[str, Any], *, settings: Settings
 ) -> dict[str, int]:
+    """POST the full snapshot: ``{"facts": {...}, "components": [...]}``."""
     async with http.authed_client(
         base_url=state.server_url,
         bearer=state.agent_token,
@@ -41,6 +42,9 @@ async def submit_inventory(
             c,
             "POST",
             "/api/v1/agents/inventory",
-            json={"components": components},
+            json={
+                "facts": snapshot.get("facts", {}),
+                "components": snapshot.get("components", []),
+            },
         )
         return body

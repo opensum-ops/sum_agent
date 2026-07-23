@@ -6,6 +6,8 @@ import asyncio
 import json
 from typing import Any
 
+from sum_agent.inventory.base import register
+
 _LSBLK_CMD = (
     "lsblk",
     "-J",
@@ -76,3 +78,6 @@ def parse(json_text: str) -> list[dict[str, Any]]:
 async def collect() -> list[dict[str, Any]]:
     text = await _run_lsblk()
     return parse(text)
+
+
+register("disks", "components", collect)

@@ -7,6 +7,8 @@ from typing import Any
 
 import psutil
 
+from sum_agent.inventory.base import register
+
 CPUINFO_PATH = Path("/proc/cpuinfo")
 
 
@@ -110,3 +112,6 @@ def collect(*, cpuinfo: str | None = None) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+register("cpu", "components", collect)

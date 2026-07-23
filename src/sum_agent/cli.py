@@ -83,9 +83,9 @@ async def _cmd_run(_args: argparse.Namespace) -> int:
 async def _cmd_inventory(args: argparse.Namespace) -> int:
     from sum_agent.inventory.snapshot import build
 
-    components = await build()
+    snapshot = await build()
     indent = 2 if args.pretty else None
-    json.dump(components, sys.stdout, default=str, indent=indent, sort_keys=True)
+    json.dump(snapshot, sys.stdout, default=str, indent=indent, sort_keys=True)
     sys.stdout.write("\n")
     return EXIT_OK
 
