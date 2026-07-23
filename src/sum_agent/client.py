@@ -29,6 +29,35 @@ async def enroll(*, server_url: str, enrollment_token: str, settings: Settings) 
     )
 
 
+async def heartbeat(
+    state: State,
+    *,
+    settings: Settings,
+    running: bool = True,
+    detail: str | None = None,
+    boot_id: str | None = None,
+) -> dict[str, Any]:
+    """POST ``/api/v1/agents/heartbeat``.
+
+    ``running=False`` sends the goodbye (``state: stopping``) with ``detail``
+    explaining why (rebooting, powered_off, agent_stop).
+    """
+    payload: dict[str, Any] = {"state": "running" if running else "stopping"}
+    if detail is not None:
+        payload["detail"] = detail
+    if boot_id is not None:
+        payload["boot_id"] = boot_id
+    async with http.authed_client(
+        base_url=state.server_url,
+        bearer=state.agent_token,
+        settings=settings,
+    ) as c:
+        body: dict[str, Any] = await http.request_json(
+            c, "POST", "/api/v1/agents/heartbeat", json=payload
+        )
+        return body
+
+
 async def submit_inventory(
     state: State, snapshot: dict[str, Any], *, settings: Settings
 ) -> dict[str, int]:
