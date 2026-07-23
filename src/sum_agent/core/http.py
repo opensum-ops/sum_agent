@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 import structlog
 
+from sum_agent import __version__
 from sum_agent.core.errors import ServerError, TransportError
 from sum_agent.settings import Settings
 
@@ -22,7 +23,7 @@ DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 
 
 def _build_client(*, base_url: str, bearer: str | None, settings: Settings) -> httpx.AsyncClient:
-    headers: dict[str, str] = {"User-Agent": "sum-agent/0.1.0"}
+    headers: dict[str, str] = {"User-Agent": f"sum-agent/{__version__}"}
     if bearer is not None:
         headers["Authorization"] = f"Bearer {bearer}"
     verify: bool | str = True
