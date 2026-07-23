@@ -22,7 +22,7 @@ STATE_FILENAME = "state.json"
 
 class State(BaseModel):
     server_url: str
-    server_id: uuid.UUID
+    host_id: uuid.UUID
     agent_token: str
     signing_public_key_b64: str
     enrolled_at: dt.datetime

@@ -14,7 +14,7 @@ from sum_agent.core.errors import NotEnrolledError, StateCorruptedError
 def _sample(server_url: str = "https://example.com") -> state_mod.State:
     return state_mod.State(
         server_url=server_url,
-        server_id=uuid.uuid4(),
+        host_id=uuid.uuid4(),
         agent_token="t" * 64,
         signing_public_key_b64="A" * 44,
         enrolled_at=dt.datetime.now(tz=dt.UTC),

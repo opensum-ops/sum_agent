@@ -36,30 +36,23 @@ class Settings(BaseSettings):
 
     server_url: str = ""
     state_dir: Path = Field(default=Path("~/.local/state/sum-agent"))
-    plugins_dir: Path | None = None
 
-    poll_interval_seconds: int = Field(default=15, ge=1)
     inventory_interval_seconds: int = Field(default=3600, ge=10)
-    job_timeout_seconds: int = Field(default=300, ge=1)
-
-    trusted_plugin_keys: str = ""
 
     log_level: Literal["debug", "info", "warning", "error"] = "info"
     log_format: LogFormat = LogFormat.console
 
     tls_insecure: bool = False
 
-    @field_validator("state_dir", "plugins_dir", mode="before")
+    @field_validator("state_dir", mode="before")
     @classmethod
-    def _expand_path(cls, v: str | Path | None) -> Path | None:
-        if v is None or v == "":
-            return None
+    def _expand_path(cls, v: str | Path) -> Path | str:
+        if v == "":
+            return v
         return _expand(str(v))
 
     @model_validator(mode="after")
     def _defaults_and_safety(self) -> Settings:
-        if self.plugins_dir is None:
-            object.__setattr__(self, "plugins_dir", self.state_dir / "plugins")
         if self.tls_insecure and self.server_url:
             host = urlparse(self.server_url).hostname or ""
             if host not in ("localhost", "127.0.0.1", "::1"):
@@ -67,9 +60,6 @@ class Settings(BaseSettings):
                     "tls_insecure=true is only allowed when server_url points at localhost"
                 )
         return self
-
-    def trusted_plugin_key_list(self) -> list[str]:
-        return [k.strip() for k in self.trusted_plugin_keys.split(",") if k.strip()]
 
 
 @lru_cache(maxsize=1)
