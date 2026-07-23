@@ -1,8 +1,8 @@
 # Manual end-to-end smoke test
 
 The agent's automated tests are unit-scoped. To exercise the full enroll →
-inventory → poll → pickup → execute → report cycle, run this smoke test by hand
-against a local `sum_server`.
+inventory → heartbeat → presence cycle, run this smoke test by hand against a
+local `sum_server`.
 
 ## Prerequisites
 
@@ -24,60 +24,47 @@ uv run alembic upgrade head
 uv run uvicorn sum_server.main:app --reload
 ```
 
-## Create a Server + enrollment
+## Enroll via the web UI
 
-In another terminal:
-
-```sh
-# Log in.
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
-    -H 'Content-Type: application/json' \
-    -d '{"email":"admin@example.com","password":"admin-pw-12345"}' \
-    | jq -r .access_token)
-
-# Create a Server.
-SERVER_ID=$(curl -s -X POST http://localhost:8000/api/v1/servers \
-    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    -d '{"name":"smoke-host","status":"active"}' | jq -r .id)
-
-# Create an enrollment.
-ENROLL=$(curl -s -X POST http://localhost:8000/api/v1/agents/enrollments \
-    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    -d "{\"server_id\":\"$SERVER_ID\"}" | jq -r .enrollment_token)
-```
-
-## Run the agent
+1. Open `http://localhost:8000/login` and sign in with the bootstrap admin.
+2. Hosts → **Enroll host** → create the host; the wizard shows the exact
+   commands and the one-time token.
+3. In the agent terminal, run them:
 
 ```sh
 cd ../sum_agent
 uv sync
 export SUM_AGENT_SERVER_URL=http://localhost:8000
-export SUM_AGENT_TLS_INSECURE=true
-uv run sum-agent enroll --token "$ENROLL"
+uv run sum-agent enroll --token <one-time-token>
 uv run sum-agent run
 ```
 
-The agent should log `agent_started`, then `inventory_submitted`, then poll
-every 15 seconds.
+The agent logs `agent_started`, then `inventory_submitted`, and heartbeats
+every 30 seconds.
 
-## Dispatch a job
+## What to verify
 
-```sh
-curl -s -X POST "http://localhost:8000/api/v1/servers/$SERVER_ID/jobs" \
-    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    -d '{"capability":"rename_nic","payload":{"current_name":"eth0","new_name":"ens99"}}'
-```
-
-The agent will log `job_received`, then `job_finished`. On a host without an
-`eth0` it will report `failed` with `interface_not_found`, which is also a
-valid path through the agent.
+- The host's pill flips to **online** within one heartbeat interval; the
+  host's display name becomes the reported hostname.
+- The Overview tab fills with facts (hostname, kernel, OS, addressing);
+  Storage / Network / Hardware tabs show the collected components.
+- `Ctrl-C` the agent: the pill becomes **stopped** (goodbye received).
+- `kill -9` the agent instead: the pill degrades to **unreachable** after the
+  online window (default 90 s), since no goodbye was sent.
+- Reboot the machine (systemd host): the pill shows **rebooting** during
+  shutdown, then returns to **online** when the agent comes back.
 
 ## Verify the audit trail
 
 ```sh
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"admin@example.com","password":"admin-pw-12345"}' \
+    | jq -r .access_token)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/audit \
     | jq '.items[].action' | sort -u
 ```
 
-You should see `agent.enrolled`, `agent.inventory_submitted`, `job.create`,
-`job.picked_up`, and `job.failed` (or `job.completed`) at minimum.
+You should see `agent.enrolled`, `agent.inventory_submitted`, and
+`host.reported_shutdown` after a clean stop. A `kill -9` followed by a host
+reboot also produces `host.unclean_reboot` (boot_id changed with no goodbye).
