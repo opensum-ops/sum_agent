@@ -52,7 +52,10 @@ select = ["E", "F", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "ASYNC", "PT"]
 ignore = ["S101", "S603", "S607"]  # S603/S607: subprocess + partial path are intentional for system tools
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "S106", "S311", "PLR2004"]
+"tests/*" = ["S105", "S106", "S311", "PLR2004", "ASYNC240"]
+# updater.py deliberately re-execs (S606) and does one-shot local fs ops on the
+# update path (ASYNC240 is about event-loop blocking, not relevant here).
+"src/sum_agent/updater.py" = ["S606", "ASYNC240"]
 
 [tool.mypy]
 python_version = "3.12"

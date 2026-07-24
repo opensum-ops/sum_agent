@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from pathlib import Path
 from typing import Any
 
+from sum_agent import __version__
 from sum_agent.core import http
 from sum_agent.core.state import State
 from sum_agent.settings import Settings
@@ -42,7 +44,10 @@ async def heartbeat(
     ``running=False`` sends the goodbye (``state: stopping``) with ``detail``
     explaining why (rebooting, powered_off, agent_stop).
     """
-    payload: dict[str, Any] = {"state": "running" if running else "stopping"}
+    payload: dict[str, Any] = {
+        "state": "running" if running else "stopping",
+        "agent_version": __version__,
+    }
     if detail is not None:
         payload["detail"] = detail
     if boot_id is not None:
@@ -56,6 +61,25 @@ async def heartbeat(
             c, "POST", "/api/v1/agents/heartbeat", json=payload
         )
         return body
+
+
+async def download_binary(state: State, url: str, dest: Path, *, settings: Settings) -> None:
+    """Stream a server-hosted binary to ``dest`` (agent-authed, TLS)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(".part")
+    async with (
+        http.authed_client(
+            base_url=state.server_url,
+            bearer=state.agent_token,
+            settings=settings,
+        ) as c,
+        c.stream("GET", url) as resp,
+    ):
+        resp.raise_for_status()
+        with tmp.open("wb") as f:
+            async for chunk in resp.aiter_bytes():
+                f.write(chunk)
+    tmp.replace(dest)
 
 
 async def submit_inventory(

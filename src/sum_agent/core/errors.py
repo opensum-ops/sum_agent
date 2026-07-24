@@ -41,3 +41,7 @@ class StateCorruptedError(AgentError):
 
 class SignatureError(AgentError):
     """A signature did not verify against the registered server public key."""
+
+
+class UpdateError(AgentError):
+    """A self-update could not be staged or applied (verify/download/smoke)."""
