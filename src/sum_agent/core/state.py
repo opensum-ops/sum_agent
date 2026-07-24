@@ -20,12 +20,25 @@ from sum_agent.core.errors import NotEnrolledError, StateCorruptedError
 STATE_FILENAME = "state.json"
 
 
+class PendingVerify(BaseModel):
+    """Set while a just-applied self-update awaits confirmation. If the new
+    binary can't establish itself by ``deadline``, the agent reverts to
+    ``previous_binary``.
+    """
+
+    target_version: str
+    previous_binary: str
+    deadline: dt.datetime
+
+
 class State(BaseModel):
     server_url: str
     host_id: uuid.UUID
     agent_token: str
     signing_public_key_b64: str
     enrolled_at: dt.datetime
+    # Present only mid-update (unknown to older agents, which ignore it).
+    pending_verify: PendingVerify | None = None
 
 
 def _path(state_dir: Path) -> Path:

@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     inventory_interval_seconds: int = Field(default=3600, ge=10)
     heartbeat_interval_seconds: int = Field(default=30, ge=5)
 
+    # Self-update: apply server-signed update directives (frozen binary only).
+    self_update_enabled: bool = True
+    # How long a freshly-applied binary has to establish itself before the
+    # agent reverts to the previous binary.
+    self_update_verify_seconds: int = Field(default=120, ge=15)
+
     log_level: Literal["debug", "info", "warning", "error"] = "info"
     log_format: LogFormat = LogFormat.console
 

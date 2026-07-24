@@ -1,6 +1,6 @@
 # sum_agent
 
-Pull-based inventory agent for OpenSUM. Runs on every managed host, collects hardware components and system facts, reports them to sum_server, and heartbeats so the server can show live presence (online, unreachable, rebooting, powered off, stopped). On SIGTERM it classifies the shutdown via systemd and sends a final goodbye report. All communication is initiated outbound by the agent. **Never opens a listening port.**
+Pull-based inventory agent for OpenSUM. Runs on every managed host, collects hardware components and system facts, reports them to sum_server, and heartbeats so the server can show live presence (online, unreachable, rebooting, powered off, stopped). On SIGTERM it classifies the shutdown via systemd and sends a final goodbye report. It can also update itself in place: the server hands the agent a signed directive on a heartbeat, the agent pulls the new binary from the server, verifies signature + checksum, swaps it in, and fails over to the previous binary if the new one can't establish itself. All communication is initiated outbound by the agent. **Never opens a listening port.**
 
 ## Status
 
