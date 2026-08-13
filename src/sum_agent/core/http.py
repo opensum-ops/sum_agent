@@ -6,6 +6,7 @@ and a ``TLS_INSECURE`` escape hatch for dev (gated to localhost in settings).
 
 from __future__ import annotations
 
+import ssl
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -15,6 +16,7 @@ import structlog
 
 from sum_agent import __version__
 from sum_agent.core.errors import ServerError, TransportError
+from sum_agent.core.tls import system_trust_context
 from sum_agent.settings import Settings
 
 log = structlog.get_logger(__name__)
@@ -26,7 +28,10 @@ def _build_client(*, base_url: str, bearer: str | None, settings: Settings) -> h
     headers: dict[str, str] = {"User-Agent": f"sum-agent/{__version__}"}
     if bearer is not None:
         headers["Authorization"] = f"Bearer {bearer}"
-    verify: bool | str = True
+    # Never httpx's default `verify=True`: that trusts certifi's public roots
+    # rather than this host's CA store, so a server behind a private CA fails
+    # verification on a machine that plainly trusts it. See core/tls.py.
+    verify: bool | ssl.SSLContext = system_trust_context()
     if settings.tls_insecure:
         verify = False
         log.warning("tls_insecure_enabled", server_url=base_url)
