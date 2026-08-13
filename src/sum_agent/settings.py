@@ -46,6 +46,16 @@ class Settings(BaseSettings):
     # agent reverts to the previous binary.
     self_update_verify_seconds: int = Field(default=120, ge=15)
 
+    # Self-uninstall: apply server-signed removal directives (frozen binary
+    # only). Off switch for an operator who would rather remove agents by hand.
+    self_uninstall_enabled: bool = True
+    # What the installer put where. Defaults match sum_server's install/service
+    # constants; the two are one contract about the layout on a host, and the
+    # uninstaller has to name the same paths to undo it.
+    service_name: str = "sum-agent"
+    unit_path: str = "/etc/systemd/system/sum-agent.service"
+    env_file: str = "/etc/sum-agent/agent.env"
+
     log_level: Literal["debug", "info", "warning", "error"] = "info"
     log_format: LogFormat = LogFormat.console
 
